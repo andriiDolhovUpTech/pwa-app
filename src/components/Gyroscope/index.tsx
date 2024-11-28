@@ -1,45 +1,100 @@
-'use client'
-import React, { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-const GyroscopeComponent: React.FC = () => {
-    const [motionData, setMotionData] = useState({
-        x: 0,
-        y: 0,
-        z: 0,
-    });
+type DeviceOrientation = {
+    alpha: number | null;
+    beta: number | null;
+    gamma: number | null;
+};
 
-    useEffect(() => {
-        const handleMotion = (event: DeviceMotionEvent) => {
-            if (event.rotationRate) {
-                const { alpha: x = 0, beta: y = 0, gamma: z = 0 } = event.rotationRate;
-                setMotionData({ x: x || 0, y: y || 0, z: z || 0 });
-            }
-        };
+type UseDeviceOrientationData = {
+    orientation: DeviceOrientation | null;
+    requestAccess: () => Promise<boolean>;
+    revokeAccess: () => Promise<void>;
+};
 
-        if (typeof window !== 'undefined' && 'DeviceMotionEvent' in window) {
-            window.addEventListener('devicemotion', handleMotion);
-        } else {
-            console.error('DeviceMotion API is not supported by your browser.');
+export const useDeviceOrientation = (): UseDeviceOrientationData => {
+    const [orientation, setOrientation] = useState<DeviceOrientation | null>(null);
+
+    const onDeviceOrientation = (event: DeviceOrientationEvent): void => {
+        setOrientation({
+            alpha: event.alpha,
+            beta: event.beta,
+            gamma: event.gamma,
+        });
+    };
+
+    const revokeAccessAsync = async (): Promise<void> => {
+        window.removeEventListener('deviceorientation', onDeviceOrientation);
+        setOrientation(null);
+    };
+
+    const requestAccessAsync = async (): Promise<boolean> => {
+        if (!DeviceOrientationEvent) {
+            return false;
         }
 
-        return () => {
-            window.removeEventListener('devicemotion', handleMotion);
+        if (
+            (DeviceOrientationEvent as any).requestPermission &&
+            typeof (DeviceOrientationEvent as any).requestPermission === 'function'
+        ) {
+            let permission: PermissionState;
+            try {
+                permission = await (DeviceOrientationEvent as any).requestPermission();
+            } catch (err) {
+                return false;
+            }
+            if (permission !== 'granted') {
+                return false;
+            }
+        }
+
+        window.addEventListener('deviceorientation', onDeviceOrientation);
+
+        return true;
+    };
+
+    const requestAccess = useCallback(requestAccessAsync, []);
+    const revokeAccess = useCallback(revokeAccessAsync, []);
+
+    useEffect(() => {
+        return (): void => {
+            revokeAccess();
         };
-    }, []);
+    }, [revokeAccess]);
+
+    return {
+        orientation,
+        requestAccess,
+        revokeAccess,
+    };
+};
+
+const GyroscopeComponent = (): React.ReactElement => {
+    const { orientation, requestAccess, revokeAccess } = useDeviceOrientation();
+
+    const onToggle = (toggleState: boolean): void => {
+        const result = toggleState ? requestAccess() : revokeAccess();
+    };
+
+    const orientationInfo = orientation && (
+        <ul>
+            <li>
+                ɑ: <code>{orientation.alpha}</code>
+            </li>
+            <li>
+                β: <code>{orientation.beta}</code>
+            </li>
+            <li>
+                γ: <code>{orientation.gamma}</code>
+            </li>
+        </ul>
+    );
 
     return (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-            <h2>Gyroscope Readings</h2>
-            <p>
-                <strong>X:</strong> {motionData.x?.toFixed(2)}
-            </p>
-            <p>
-                <strong>Y:</strong> {motionData.y?.toFixed(2)}
-            </p>
-            <p>
-                <strong>Z:</strong> {motionData.z?.toFixed(2)}
-            </p>
-        </div>
+        <>
+            <button onClick={() => onToggle(true)}>Toggle</button>
+            {orientationInfo}
+        </>
     );
 };
 
