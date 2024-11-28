@@ -48,6 +48,10 @@
   margin-bottom: 8px;
 }
 
+.main {
+  background: var(--gray-alpha-100);
+}
+
 .main code {
   font-family: inherit;
   background: var(--gray-alpha-100);
