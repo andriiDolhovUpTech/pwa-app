@@ -12,7 +12,7 @@ const GyroscopeComponent: React.FC = () => {
         const handleMotion = (event: DeviceMotionEvent) => {
             if (event.rotationRate) {
                 const { alpha: x = 0, beta: y = 0, gamma: z = 0 } = event.rotationRate;
-                setMotionData({ x, y, z });
+                setMotionData({ x: x || 0, y: y || 0, z: z || 0 });
             }
         };
 
