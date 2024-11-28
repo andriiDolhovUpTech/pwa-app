@@ -1,10 +1,10 @@
-import Image from "next/image";
 import styles from "./page.module.css";
+import GyroscopeComponent from "@/components/Gyroscope";
 
 export default function Home() {
   return (
     <div className={styles.page}>
-      Hello World123
+      <GyroscopeComponent />
     </div>
   );
 }
